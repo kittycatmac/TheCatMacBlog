@@ -18,7 +18,7 @@ export default function NavMenu({ SITE_TITLE }) {
       <h2 style={{ display: 'flex', alignItems: 'center' }}> 
       <button onClick={toggleMenu} style={{ background: 'none', border: 'none', 
           color: 'inherit', fontSize: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', }}>
-          <img src="../../public/robot-cat-1.jpeg" alt="Menu Icon" style={{ width: '70px', height: '70px', padding: '5px', borderRadius: '10px' }} />
+          <img src="../../public/space_icon.png" alt="Menu Icon" style={{ width: '70px', height: '70px', padding: '5px', borderRadius: '10px' }} />
         </button>
         <span>{SITE_TITLE}</span>
       </h2>

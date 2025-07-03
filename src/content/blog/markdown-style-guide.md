@@ -1,7 +1,7 @@
 ---
-title: 'Markdown Style Guide'
-description: 'Here is a sample of some basic Markdown syntax that can be used when writing Markdown content in Astro.'
-pubDate: 'Jun 19 2024'
+title: 'Build a Blog with Astro Js and React'
+description: 'Steps for creating a blog with Astro Js and React.'
+pubDate: 'July 2025'
 heroImage: '/Build_the_web_you_want.png'
 ---
 
