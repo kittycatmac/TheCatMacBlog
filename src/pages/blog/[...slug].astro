@@ -3,18 +3,447 @@ import { type CollectionEntry, getCollection } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
-		params: { slug: post.slug },
-		props: post,
-	}));
-}
-type Props = CollectionEntry<'blog'>;
+  const posts = await getCollection('blog');
+  const paths = [];
 
-const post = Astro.props;
-const { Content } = await post.render();
+  // Process each blog post to extract path information from slug
+  const processedPosts = posts.map(post => {
+    const pathParts = post.slug.split('/');
+    return {
+      ...post,
+      category: pathParts[0],
+      subcategory: pathParts.length > 2 ? pathParts[1] : undefined,
+      postSlug: pathParts[pathParts.length - 1],
+      pathParts: pathParts
+    };
+  });
+
+  // 1. Main blog index (/blog)
+  paths.push({
+    params: { slug: undefined },
+    props: { 
+      type: 'index',
+      posts: processedPosts 
+    }
+  });
+
+  // 2. Category pages (/blog/category)
+  const categories = [...new Set(processedPosts.map(post => post.category))];
+  categories.forEach(category => {
+    const categoryPosts = processedPosts.filter(post => post.category === category);
+    paths.push({
+      params: { slug: category },
+      props: { 
+        type: 'category',
+        category,
+        posts: categoryPosts 
+      }
+    });
+  });
+
+  // 3. Subcategory pages (/blog/category/subcategory)
+  const subcategories = processedPosts
+    .filter(post => post.subcategory)
+    .map(post => ({ category: post.category, subcategory: post.subcategory }));
+  
+  const uniqueSubcategories = Array.from(
+    new Set(subcategories.map(s => `${s.category}/${s.subcategory}`))
+  ).map(path => {
+    const [category, subcategory] = path.split('/');
+    return { category, subcategory };
+  });
+
+  uniqueSubcategories.forEach(({ category, subcategory }) => {
+    const subcategoryPosts = processedPosts.filter(post => 
+      post.category === category && post.subcategory === subcategory
+    );
+    paths.push({
+      params: { slug: `${category}/${subcategory}` },
+      props: { 
+        type: 'subcategory',
+        category,
+        subcategory,
+        posts: subcategoryPosts 
+      }
+    });
+  });
+
+  // 4. Individual blog posts (keeping your original structure)
+  posts.forEach(post => {
+    paths.push({
+      params: { slug: post.slug },
+      props: { 
+        type: 'post',
+        post
+      }
+    });
+  });
+
+  return paths;
+}
+
+type Props = {
+  type: 'index' | 'category' | 'subcategory' | 'post';
+  posts?: any[];
+  category?: string;
+  subcategory?: string;
+  post?: CollectionEntry<'blog'>;
+};
+
+const { type, posts, category, subcategory, post } = Astro.props as Props;
+
+// Helper function to format category names  
+function formatCategoryName(name: string) {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Generate breadcrumbs
+function generateBreadcrumbs() {
+  const breadcrumbs = [{ label: 'Blog', href: '/blog' }];
+  
+  if (category) {
+    breadcrumbs.push({ 
+      label: formatCategoryName(category), 
+      href: `/blog/${category}` 
+    });
+  }
+  
+  if (subcategory) {
+    breadcrumbs.push({ 
+      label: formatCategoryName(subcategory), 
+      href: `/blog/${category}/${subcategory}` 
+    });
+  }
+  
+  if (type === 'post' && post?.data?.title) {
+    breadcrumbs.push({ 
+      label: post.data.title, 
+      href: '#' 
+    });
+  }
+  
+  return breadcrumbs;
+}
+
+const breadcrumbs = generateBreadcrumbs();
+
+// For individual posts, get the Content component
+let Content: any = null;
+if (type === 'post' && post) {
+  const rendered = await post.render();
+  Content = rendered.Content;
+}
+
+// Group posts by category for the index page
+let categorizedPosts: Record<string, any[]> = {};
+if (type === 'index' && posts) {
+  categorizedPosts = posts.reduce((acc: Record<string, any[]>, post) => {
+    const cat = post.category;
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(post);
+    return acc;
+  }, {});
+}
 ---
 
-<BlogPost {...post.data}>
-	<Content />
-</BlogPost>
+{type === 'post' && post && Content ? (
+  <BlogPost {...post.data}>
+    <Content />
+  </BlogPost>
+) : (
+  <BlogPost 
+    title={
+      type === 'subcategory' ? `${formatCategoryName(subcategory!)} - ${formatCategoryName(category!)}` :
+      type === 'category' ? formatCategoryName(category!) : 
+      'Blog'
+    }
+    description={
+      type === 'subcategory' ? `Posts in ${formatCategoryName(category!)} → ${formatCategoryName(subcategory!)}` :
+      type === 'category' ? `All posts in the ${formatCategoryName(category!)} category` :
+      'Explore our collection of articles organized by category.'
+    }
+    pubDate={new Date()}
+  >
+    <main class="blog-container">
+      <!-- Breadcrumb Navigation -->
+      <nav class="breadcrumb">
+        {breadcrumbs.map((crumb, index) => (
+          <span>
+            {index > 0 && <span class="separator"> / </span>}
+            {crumb.href === '#' ? (
+              <span class="current">{crumb.label}</span>
+            ) : (
+              <a href={crumb.href}>{crumb.label}</a>
+            )}
+          </span>
+        ))}
+      </nav>
+
+      <!-- Blog Index -->
+      {type === 'index' && (
+        <div class="blog-index">
+          <h1>Blog</h1>
+          <p>Explore our collection of articles organized by category.</p>
+          
+          {Object.entries(categorizedPosts).map(([cat, catPosts]) => (
+            <section class="category-section">
+              <h2>
+                <a href={`/blog/${cat}`}>{formatCategoryName(cat)}</a>
+              </h2>
+              <div class="posts-grid">
+                {catPosts.slice(0, 3).map((p) => (
+                  <article class="post-card">
+                    <h3>
+                      <a href={`/blog/${p.slug}`}>
+                        {p.data.title}
+                      </a>
+                    </h3>
+                    <p>{p.data.description}</p>
+                    {p.data.publishDate && (
+                      <time>{p.data.publishDate.toLocaleDateString()}</time>
+                    )}
+                  </article>
+                ))}
+              </div>
+              {catPosts.length > 3 && (
+                <a href={`/blog/${cat}`} class="view-all">
+                  View all {catPosts.length} posts in {formatCategoryName(cat)} →
+                </a>
+              )}
+            </section>
+          ))}
+        </div>
+      )}
+
+      <!-- Category Index -->
+      {type === 'category' && (
+        <div class="category-page">
+          <h1>{formatCategoryName(category!)}</h1>
+          <p>All posts in the {formatCategoryName(category!)} category</p>
+          
+          <div class="posts-list">
+            {posts!.map((p) => (
+              <article class="post-item">
+                <h3>
+                  <a href={`/blog/${p.slug}`}>
+                    {p.data.title}
+                  </a>
+                </h3>
+                <p>{p.data.description}</p>
+                <div class="post-meta">
+                  {p.data.publishDate && (
+                    <time>{p.data.publishDate.toLocaleDateString()}</time>
+                  )}
+                  {p.subcategory && (
+                    <span class="subcategory">
+                      <a href={`/blog/${p.category}/${p.subcategory}`}>
+                        {formatCategoryName(p.subcategory)}
+                      </a>
+                    </span>
+                  )}
+                  {p.data.tags && (
+                    <div class="tags">
+                      {p.data.tags.map((tag: string) => (
+                        <span class="tag">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Subcategory Index -->
+      {type === 'subcategory' && (
+        <div class="subcategory-page">
+          <h1>{formatCategoryName(subcategory!)}</h1>
+          <p>Posts in {formatCategoryName(category!)} → {formatCategoryName(subcategory!)}</p>
+          
+          <div class="posts-list">
+            {posts!.map((p) => (
+              <article class="post-item">
+                <h3>
+                  <a href={`/blog/${p.slug}`}>
+                    {p.data.title}
+                  </a>
+                </h3>
+                <p>{p.data.description}</p>
+                <div class="post-meta">
+                  {p.data.publishDate && (
+                    <time>{p.data.publishDate.toLocaleDateString()}</time>
+                  )}
+                  {p.data.tags && (
+                    <div class="tags">
+                      {p.data.tags.map((tag: string) => (
+                        <span class="tag">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+    </main>
+  </BlogPost>
+)}
+
+<style>
+  .blog-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .breadcrumb {
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+  
+  .breadcrumb a {
+    color: #666;
+    text-decoration: none;
+  }
+  
+  .breadcrumb a:hover {
+    color: #000;
+    text-decoration: underline;
+  }
+  
+  .current {
+    color: #333;
+    font-weight: 500;
+  }
+  
+  .separator {
+    color: #ccc;
+    margin: 0 0.5rem;
+  }
+
+  .category-section {
+    margin-bottom: 3rem;
+  }
+  
+  .category-section h2 a {
+    color: #333;
+    text-decoration: none;
+  }
+  
+  .category-section h2 a:hover {
+    color: #0066cc;
+  }
+  
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
+  
+  .post-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+  
+  .post-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+  }
+  
+  .post-card a {
+    color: #333;
+    text-decoration: none;
+  }
+  
+  .post-card a:hover {
+    color: #0066cc;
+  }
+  
+  .posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .post-item {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 1rem;
+  }
+  
+  .post-item:last-child {
+    border-bottom: none;
+  }
+  
+  .post-item h3 {
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .post-item a {
+    color: #333;
+    text-decoration: none;
+  }
+  
+  .post-item a:hover {
+    color: #0066cc;
+  }
+  
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    flex-wrap: wrap;
+  }
+  
+  .subcategory a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+  
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .tag {
+    background: #f0f0f0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+  
+  .view-all {
+    display: inline-block;
+    margin-top: 1rem;
+    color: #0066cc;
+    text-decoration: none;
+  }
+  
+  .view-all:hover {
+    text-decoration: underline;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .blog-container {
+      padding: 1rem;
+    }
+    
+    .posts-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .post-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+</style>

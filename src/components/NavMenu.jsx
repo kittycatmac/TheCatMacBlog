@@ -14,11 +14,15 @@ export default function NavMenu({ SITE_TITLE }) {
   };
 
   return (
-    <div className="nav-container">
+    <div className="nav-container" style={{paddingTop: '5px'}}>
       <h2 style={{ display: 'flex', alignItems: 'center' }}> 
-      <button onClick={toggleMenu} style={{ background: 'none', border: 'none', 
-          color: 'inherit', fontSize: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', }}>
-          <img src="../../public/space_icon.png" alt="Menu Icon" style={{ width: '70px', height: '70px', padding: '5px', borderRadius: '10px' }} />
+      <button onClick={toggleMenu} style={{ 
+        background: 'none', border: 'none', 
+        color: 'inherit', fontSize: 'inherit',
+        display: 'flex', alignItems: 'center', 
+        justifyContent: 'center', cursor: 'pointer'}}>
+          <img src="../../public/starry-night-black-cat.jpeg" alt="Menu Icon" 
+          style={{ width: '70px', height: '70px', borderRadius: '5px' }} />
         </button>
         <span>{SITE_TITLE}</span>
       </h2>
