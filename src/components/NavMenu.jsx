@@ -21,7 +21,7 @@ export default function NavMenu({ SITE_TITLE }) {
         color: 'inherit', fontSize: 'inherit',
         display: 'flex', alignItems: 'center', 
         justifyContent: 'center', cursor: 'pointer'}}>
-          <img src="../../public/starry-night-black-cat.jpeg" alt="Menu Icon" 
+          <img src="/starry-night-black-cat.jpeg" alt="Menu Icon" 
           style={{ width: '70px', height: '70px', borderRadius: '5px' }} />
         </button>
         <span>{SITE_TITLE}</span>
