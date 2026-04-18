@@ -1,7 +1,7 @@
 ---
 title: 'Build a Blog with Astro Js and React'
 description: 'Steps for creating a blog with Astro Js and React.'
-pubDate: 'July 2025'
+pubDate: 'March 28 2026'
 heroImage: '/Build_the_web_you_want.png'
 ---
 
