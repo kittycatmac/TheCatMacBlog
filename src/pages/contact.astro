@@ -1,0 +1,12 @@
+---
+import Layout from '../layouts/BlogPost.astro';
+import ContactPage from '../components/ContactPage';
+---
+
+<Layout
+  title="Contact"
+  description="Get in touch with me"
+  pubDate={new Date('May 15, 2025')}
+>
+  <ContactPage client:load />
+</Layout>
