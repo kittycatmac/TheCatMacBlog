@@ -3,12 +3,11 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
-import node from '@astrojs/node';
+import netlify from '@astrojs/netlify';
 
-// https://astro.build/config
 export default defineConfig({
 	site: 'https://example.com',
 	output: 'hybrid',
-	adapter: node({ mode: 'standalone' }),
+	adapter: netlify(),
 	integrations: [mdx(), sitemap(), react()],
 });
